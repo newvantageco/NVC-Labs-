@@ -53,109 +53,48 @@ export default function PatientsPage() {
     setUploadStatus({ type: null, message: '' })
 
     try {
-      const text = await file.text()
-      const rows = text.split('\n').map(row => row.split(','))
+      // Create form data
+      const formData = new FormData()
+      formData.append('file', file)
 
-      // Validate headers
-      const headers = rows[0].map(h => h.trim().toLowerCase())
-      const requiredHeaders = ['first_name', 'last_name', 'phone_number']
-      const missingHeaders = requiredHeaders.filter(h => !headers.includes(h))
+      // Send to API
+      const response = await fetch('/api/patients/upload', {
+        method: 'POST',
+        body: formData,
+      })
 
-      if (missingHeaders.length > 0) {
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
         setUploadStatus({
           type: 'error',
-          message: `Missing required columns: ${missingHeaders.join(', ')}`
+          message: result.error || 'Failed to import patients',
         })
         setUploading(false)
         return
       }
 
-      // Get column indexes
-      const firstNameIdx = headers.indexOf('first_name')
-      const lastNameIdx = headers.indexOf('last_name')
-      const phoneIdx = headers.indexOf('phone_number')
-      const lastTestIdx = headers.indexOf('last_eye_test_date')
-      const riskCategoryIdx = headers.indexOf('risk_category')
-      const lastClinicalIdx = headers.indexOf('last_clinical_test_date')
-      const clinicalNotesIdx = headers.indexOf('clinical_condition_notes')
-
-      // Get current user and practice
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        setUploadStatus({ type: 'error', message: 'Not authenticated' })
-        setUploading(false)
-        return
-      }
-
-      const { data: practice } = await supabase
-        .from('practices')
-        .select('id')
-        .eq('user_id', user.id)
-        .single()
-
-      if (!practice) {
-        setUploadStatus({ type: 'error', message: 'Practice not found' })
-        setUploading(false)
-        return
-      }
-
-      // Process patients
-      const patients = []
-      let skipped = 0
-
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i]
-        if (row.length < requiredHeaders.length) {
-          skipped++
-          continue
+      // Success
+      setUploadStatus({
+        type: 'success',
+        message: result.message,
+        details: {
+          total: result.stats.total_rows,
+          imported: result.stats.imported,
+          skipped: result.stats.skipped,
         }
+      })
 
-        const patient = {
-          practice_id: practice.id,
-          first_name: row[firstNameIdx]?.trim(),
-          last_name: row[lastNameIdx]?.trim(),
-          phone_number: row[phoneIdx]?.trim(),
-          last_eye_test_date: lastTestIdx !== -1 ? row[lastTestIdx]?.trim() || null : null,
-          risk_category: riskCategoryIdx !== -1 ? row[riskCategoryIdx]?.trim() || 'standard' : 'standard',
-          last_clinical_test_date: lastClinicalIdx !== -1 ? row[lastClinicalIdx]?.trim() || null : null,
-          clinical_condition_notes: clinicalNotesIdx !== -1 ? row[clinicalNotesIdx]?.trim() || null : null,
-        }
-
-        // Basic validation
-        if (!patient.first_name || !patient.last_name || !patient.phone_number) {
-          skipped++
-          continue
-        }
-
-        patients.push(patient)
+      // Show warnings if there were errors
+      if (result.errors && result.errors.length > 0) {
+        console.warn('CSV import warnings:', result.errors)
       }
 
-      // Insert patients
-      const { error } = await supabase
-        .from('patients')
-        .insert(patients)
-
-      if (error) {
-        setUploadStatus({
-          type: 'error',
-          message: `Failed to import: ${error.message}`
-        })
-      } else {
-        setUploadStatus({
-          type: 'success',
-          message: 'Patients imported successfully!',
-          details: {
-            total: rows.length - 1,
-            imported: patients.length,
-            skipped: skipped
-          }
-        })
-      }
     } catch (error) {
+      console.error('Upload error:', error)
       setUploadStatus({
         type: 'error',
-        message: 'Failed to process CSV file'
+        message: 'Failed to upload CSV file. Please try again.'
       })
     }
 

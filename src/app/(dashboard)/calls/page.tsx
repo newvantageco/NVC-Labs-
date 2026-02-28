@@ -10,12 +10,39 @@ export default function CallsPage() {
 
   const handleLaunchCampaign = async () => {
     setLaunching(true)
-    // TODO: Implement actual campaign launch with Bland AI
-    setTimeout(() => {
-      setLaunching(false)
+
+    try {
+      const response = await fetch('/api/campaigns/launch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          campaignType: campaignType,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        alert(`Failed to launch campaign: ${result.error || 'Unknown error'}`)
+        setLaunching(false)
+        return
+      }
+
+      // Success
       setShowCampaignModal(false)
-      alert('Campaign launched successfully! Calls will begin during your calling hours.')
-    }, 2000)
+      alert(`Campaign launched successfully! ${result.campaign.calls_triggered} calls have been queued. ${result.campaign.estimated_completion}`)
+
+      // Refresh page to show updated stats
+      window.location.reload()
+
+    } catch (error) {
+      console.error('Campaign launch error:', error)
+      alert('Failed to launch campaign. Please try again.')
+    }
+
+    setLaunching(false)
   }
 
   return (
