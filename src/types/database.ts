@@ -28,6 +28,8 @@ export interface Database {
           subscription_status: 'active' | 'inactive' | 'cancelled'
           monthly_call_limit: number
           calls_used_this_month: number
+          avg_clinical_appointment_value: number
+          track_clinical_revenue: boolean
         }
         Insert: {
           id?: string
@@ -47,6 +49,8 @@ export interface Database {
           subscription_status?: 'active' | 'inactive' | 'cancelled'
           monthly_call_limit?: number
           calls_used_this_month?: number
+          avg_clinical_appointment_value?: number
+          track_clinical_revenue?: boolean
         }
         Update: {
           id?: string
@@ -66,6 +70,8 @@ export interface Database {
           subscription_status?: 'active' | 'inactive' | 'cancelled'
           monthly_call_limit?: number
           calls_used_this_month?: number
+          avg_clinical_appointment_value?: number
+          track_clinical_revenue?: boolean
         }
       }
       patients: {
@@ -81,6 +87,10 @@ export interface Database {
           opted_out: boolean
           opted_out_at: string | null
           notes: string | null
+          risk_category: 'standard' | 'glaucoma_suspect' | 'diabetic' | 'myopia_child' | 'other_clinical'
+          last_clinical_test_date: string | null
+          next_clinical_due_date: string | null
+          clinical_condition_notes: string | null
         }
         Insert: {
           id?: string
@@ -94,6 +104,10 @@ export interface Database {
           opted_out?: boolean
           opted_out_at?: string | null
           notes?: string | null
+          risk_category?: 'standard' | 'glaucoma_suspect' | 'diabetic' | 'myopia_child' | 'other_clinical'
+          last_clinical_test_date?: string | null
+          next_clinical_due_date?: string | null
+          clinical_condition_notes?: string | null
         }
         Update: {
           id?: string
@@ -106,6 +120,51 @@ export interface Database {
           last_eye_test_date?: string | null
           opted_out?: boolean
           opted_out_at?: string | null
+          notes?: string | null
+          risk_category?: 'standard' | 'glaucoma_suspect' | 'diabetic' | 'myopia_child' | 'other_clinical'
+          last_clinical_test_date?: string | null
+          next_clinical_due_date?: string | null
+          clinical_condition_notes?: string | null
+        }
+      }
+      compliance_audit_log: {
+        Row: {
+          id: string
+          created_at: string
+          practice_id: string
+          patient_id: string
+          recall_reason: string
+          attempt_date: string
+          outcome: 'answered' | 'no_answer' | 'voicemail' | 'busy' | 'opted_out' | 'booked'
+          call_recording_url: string | null
+          call_duration_seconds: number | null
+          next_action_required: string | null
+          notes: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          practice_id: string
+          patient_id: string
+          recall_reason: string
+          attempt_date?: string
+          outcome: 'answered' | 'no_answer' | 'voicemail' | 'busy' | 'opted_out' | 'booked'
+          call_recording_url?: string | null
+          call_duration_seconds?: number | null
+          next_action_required?: string | null
+          notes?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          practice_id?: string
+          patient_id?: string
+          recall_reason?: string
+          attempt_date?: string
+          outcome?: 'answered' | 'no_answer' | 'voicemail' | 'busy' | 'opted_out' | 'booked'
+          call_recording_url?: string | null
+          call_duration_seconds?: number | null
+          next_action_required?: string | null
           notes?: string | null
         }
       }

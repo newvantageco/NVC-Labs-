@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import HighRiskPatientAlert from '@/components/dashboard/HighRiskPatientAlert'
+import ClinicalROICalculator from '@/components/dashboard/ClinicalROICalculator'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -28,6 +30,41 @@ export default async function DashboardPage() {
     .eq('practice_id', practice.id)
     .eq('opted_out', false)
 
+  // Fetch high-risk patient stats
+  const today = new Date().toISOString().split('T')[0]
+
+  const { count: overdueHighRisk } = await supabase
+    .from('patients')
+    .select('*', { count: 'exact', head: true })
+    .eq('practice_id', practice.id)
+    .neq('risk_category', 'standard')
+    .lt('next_clinical_due_date', today)
+    .eq('opted_out', false)
+
+  const { count: glaucomaSuspects } = await supabase
+    .from('patients')
+    .select('*', { count: 'exact', head: true })
+    .eq('practice_id', practice.id)
+    .eq('risk_category', 'glaucoma_suspect')
+    .lt('next_clinical_due_date', today)
+    .eq('opted_out', false)
+
+  const { count: diabeticPatients } = await supabase
+    .from('patients')
+    .select('*', { count: 'exact', head: true })
+    .eq('practice_id', practice.id)
+    .eq('risk_category', 'diabetic')
+    .lt('next_clinical_due_date', today)
+    .eq('opted_out', false)
+
+  const { count: myopiaChildren } = await supabase
+    .from('patients')
+    .select('*', { count: 'exact', head: true })
+    .eq('practice_id', practice.id)
+    .eq('risk_category', 'myopia_child')
+    .lt('next_clinical_due_date', today)
+    .eq('opted_out', false)
+
   // Fetch call stats
   const { data: callStats } = await supabase
     .from('call_logs')
@@ -38,6 +75,20 @@ export default async function DashboardPage() {
   const bookedCalls = callStats?.filter(c => c.call_status === 'booked').length || 0
   const answeredCalls = callStats?.filter(c => c.call_status === 'answered').length || 0
   const conversionRate = answeredCalls > 0 ? ((bookedCalls / answeredCalls) * 100).toFixed(1) : '0.0'
+
+  // Fetch clinical recall stats for ROI calculator
+  const { count: clinicalRecallsSent } = await supabase
+    .from('call_logs')
+    .select('*', { count: 'exact', head: true })
+    .eq('practice_id', practice.id)
+    .gte('created_at', new Date(new Date().setDate(1)).toISOString()) // This month
+
+  const { count: clinicalAppointmentsBooked } = await supabase
+    .from('call_logs')
+    .select('*', { count: 'exact', head: true })
+    .eq('practice_id', practice.id)
+    .eq('call_status', 'booked')
+    .gte('created_at', new Date(new Date().setDate(1)).toISOString()) // This month
 
   // Fetch recent call logs
   const { data: recentCalls } = await supabase
@@ -142,6 +193,27 @@ export default async function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Clinical Compliance Alert */}
+      <div className="mb-8">
+        <HighRiskPatientAlert
+          overdueCount={overdueHighRisk || 0}
+          glaucomaSuspects={glaucomaSuspects || 0}
+          diabeticPatients={diabeticPatients || 0}
+          myopiaChildren={myopiaChildren || 0}
+        />
+      </div>
+
+      {/* Clinical ROI Calculator */}
+      {(clinicalRecallsSent || 0) > 0 && (
+        <div className="mb-8">
+          <ClinicalROICalculator
+            highRiskPatientsRecalled={clinicalRecallsSent || 0}
+            appointmentsBooked={clinicalAppointmentsBooked || 0}
+            avgClinicalAppointmentValue={practice.avg_clinical_appointment_value}
+          />
+        </div>
+      )}
 
       {/* Subscription Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
