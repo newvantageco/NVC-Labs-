@@ -15,11 +15,12 @@ export default function SignupPage() {
     address: '',
     phoneNumber: '',
     nhsRegistrationNumber: '',
+    pmsSystem: '',
   })
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -74,6 +75,7 @@ export default function SignupPage() {
           address: formData.address,
           phone_number: formData.phoneNumber,
           nhs_registration_number: formData.nhsRegistrationNumber || null,
+          pms_system: formData.pmsSystem || null,
         })
 
       if (practiceError) {
@@ -174,6 +176,34 @@ export default function SignupPage() {
                 value={formData.nhsRegistrationNumber}
                 onChange={handleChange}
               />
+            </div>
+
+            <div>
+              <label htmlFor="pms-system" className="block text-sm font-medium text-gray-700">
+                Practice Management Software (Optional)
+              </label>
+              <select
+                id="pms-system"
+                name="pmsSystem"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                value={formData.pmsSystem}
+                onChange={handleChange}
+              >
+                <option value="">Select your PMS (helps us prioritize integrations)</option>
+                <option value="Optix">Optix</option>
+                <option value="Acuitas">Acuitas</option>
+                <option value="OptiSoft">OptiSoft</option>
+                <option value="4Sight">4Sight</option>
+                <option value="Vision Experts">Vision Experts</option>
+                <option value="Specsavers Optical Manager">Specsavers Optical Manager</option>
+                <option value="Optician Manager">Optician Manager</option>
+                <option value="Practice Plus">Practice Plus</option>
+                <option value="Other">Other</option>
+                <option value="None">None / No PMS</option>
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                This helps us build integrations for your PMS first
+              </p>
             </div>
 
             <div>
