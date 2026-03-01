@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { DetectionAgent } from '@/lib/agent/detector'
+import { AgentOrchestrator } from '@/lib/agent/orchestrator'
 import { createClient } from '@/lib/supabase/server'
 
 /**
@@ -47,6 +48,8 @@ export async function GET(request: NextRequest) {
 
     // Log detected issues
     const loggedIssues = []
+    const orchestrator = new AgentOrchestrator()
+
     for (const issue of issues) {
       try {
         const issueId = await detector.logIssue(issue)
@@ -68,6 +71,14 @@ export async function GET(request: NextRequest) {
         // Send notifications for P0/P1 issues
         if (issue.severity === 'P0' || issue.severity === 'P1') {
           await sendNotification(config, issue, issueId)
+        }
+
+        // If autonomy level > 1, automatically process the issue
+        if (config.autonomy_level > 1) {
+          // Process asynchronously (don't block cron job)
+          orchestrator.processIssue(issueId).catch((error) => {
+            console.error(`Error processing issue ${issueId}:`, error)
+          })
         }
       } catch (error) {
         console.error('Error logging issue:', error)

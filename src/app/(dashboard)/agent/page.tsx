@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { PendingFixes } from '@/components/agent/PendingFixes'
 
 interface AgentIssue {
   id: string
@@ -24,6 +25,7 @@ interface AgentConfig {
 
 export default function AgentDashboard() {
   const [issues, setIssues] = useState<AgentIssue[]>([])
+  const [pendingFixes, setPendingFixes] = useState<any[]>([])
   const [config, setConfig] = useState<AgentConfig | null>(null)
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
@@ -50,6 +52,21 @@ export default function AgentDashboard() {
 
     if (issuesData) {
       setIssues(issuesData)
+    }
+
+    // Load pending fixes (issues awaiting human approval)
+    const { data: pendingData } = await supabase
+      .from('agent_issues')
+      .select('*')
+      .eq('status', 'deploying')
+      .is('deployed_at', null)
+      .order('created_at', { ascending: false })
+
+    if (pendingData) {
+      setPendingFixes(pendingData.map(issue => ({
+        ...issue,
+        confidence: 0.9, // TODO: Extract from diagnosis
+      })))
     }
 
     // Load config
@@ -79,6 +96,28 @@ export default function AgentDashboard() {
     })
 
     setLoading(false)
+  }
+
+  const handleApprove = async (issueId: string, approved: boolean) => {
+    try {
+      const response = await fetch('/api/agent/approve-fix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ issue_id: issueId, approved }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        alert(approved ? 'Fix approved and deploying!' : 'Fix rejected')
+        loadData() // Reload data
+      } else {
+        alert(`Error: ${result.message}`)
+      }
+    } catch (error) {
+      alert('Failed to process approval')
+      console.error(error)
+    }
   }
 
   const toggleAgent = async () => {
@@ -203,6 +242,9 @@ export default function AgentDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Pending Fixes */}
+      <PendingFixes pendingFixes={pendingFixes} onApprove={handleApprove} />
 
       {/* Autonomy Level Control */}
       <div className="bg-white rounded-lg shadow p-6">
