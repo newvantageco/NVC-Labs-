@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { ApiKeys } from '@/components/settings/ApiKeys'
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'practice' | 'calling' | 'integrations' | 'ai-script'>('practice')
@@ -383,6 +384,11 @@ export default function SettingsPage() {
                 Connect Google Calendar
               </button>
             </div>
+          </div>
+
+          {/* Zapier / API Integration */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <ApiKeys />
           </div>
         </div>
       )}
